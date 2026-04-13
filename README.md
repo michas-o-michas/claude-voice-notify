@@ -1,126 +1,100 @@
 # claude-voice-notify
 
-> Voice notifications for [Claude Code](https://claude.ai/code) — speaks when builds, tests, deploys, and migrations complete. Alerts destructive actions before they run.
+> Voice notifications for [Claude Code](https://claude.ai/code) — speaks when Claude asks permission, finishes a task, and (optionally) when builds, tests, deploys and destructive commands happen.
 
-Uses Microsoft Edge TTS (free, no account needed) with neural voices — **FranciscaNeural** (pt-BR) and **JennyNeural** (en-US).
-
-## What it does
-
-| Hook | Trigger | Example |
-|------|---------|---------|
-| `PostToolUse` | Build, tests, deploy, lint, typecheck, PR finish | *"Licita Pública. Compilação concluída."* |
-| `PreToolUse` | `git push`, `rm -rf`, `supabase db push`, `sudo`, etc. | *"Licita Pública. Cuidado. Remoção recursiva de arquivos."* |
-| `PostCompact` | Context auto-compacted by Claude Code | *"Contexto compactado."* |
-| `Notification` | Claude waiting for permission or idle | *"Precisa de autorização."* |
-
-**Project name:** Automatically detected from the git repo root. First time in a project, it generates audio in the background — you'll hear it from the second command onwards.
-
-## Requirements
-
-- **macOS** (uses `afplay` and `afconvert`)
-- **Python 3.10+** (install with `brew install python@3.12` if missing)
-- **Internet** on first run (edge-tts downloads from Microsoft's servers)
+Uses pre-generated neural TTS audio (Microsoft Edge — **FranciscaNeural** pt-BR / **JennyNeural** en-US). Zero dependencies for basic use.
 
 ## Install
 
-### Option 1 — Claude Code plugin (recommended)
-
-In any Claude Code session:
-
 ```
 /plugin marketplace add michascorreia/claude-voice-notify
-/plugin install voice-notify@michascorreia-claude-voice-notify
+/plugin install claude-voice-notify@michascorreia
 ```
 
-Then run the setup (creates venv, generates audio, patches settings):
+That's it. After restarting Claude Code, the plugin speaks by default when:
 
-```bash
-cd ~/.claude/plugins/voice-notify && ./install.sh
-```
+- Claude needs **permission** or is **waiting** for input
+- Claude **finishes** a task (short "Pronto." / "Done.")
+- Context is **compacted** automatically
 
-Restart Claude Code or open a new session.
+**macOS only** (uses `afplay`).
 
-### Option 2 — Manual (clone anywhere)
+## Configure
 
-```bash
-git clone https://github.com/michascorreia/claude-voice-notify.git
-cd claude-voice-notify
-./install.sh
-```
-
-Then restart Claude Code (or open a new session).
-
-## Customize
-
-### Language
-
-Edit `config.txt`:
+Run the config command to toggle categories:
 
 ```
-LANG=en-US   # or pt-BR
+/voice-notify-config
 ```
 
-Then run `./install.sh` again to generate audio for the new language.
+A checklist appears — enable only what you want:
 
-### Project name (accents, custom text)
+| Category | Default | What it speaks |
+|---|---|---|
+| **Básico** | ✅ ON | permission, idle, compacted |
+| **Task concluída** | ✅ ON | short "Pronto." when Claude stops |
+| **Build & Tests** | ⬜ OFF | build, tests, lint, typecheck, e2e |
+| **Git & Deploy** | ⬜ OFF | PR, deploy, migration, gitnexus |
+| **Alertas** | ⬜ OFF | `git push main`, `rm -rf`, `db push`, `sudo`, etc. |
+| **Nome do projeto** | ⬜ OFF | speaks project name before each cue |
 
-Edit `audio/projects/aliases.txt` (created from `aliases.example.txt` on first install):
+You can also switch language (`pt-BR` / `en-US`) from the same command.
+
+## Project name (optional, neural)
+
+To have the plugin say your **project name** (e.g., "Licita Pública") before each notification:
+
+```
+/voice-notify-setup
+```
+
+This installs Python + `edge-tts` inside the plugin's data directory (persists across updates, isolated from your system). After setup, names are generated once per project on first trigger and cached.
+
+Customize pronunciation in `${CLAUDE_PLUGIN_DATA}/projects/aliases.txt`:
 
 ```
 my-repo-slug=My Project Name
 licita-publica=Licita Pública
 ```
 
-Then delete the cached audio to force regeneration:
-
-```bash
-rm audio/projects/my-repo-slug.m4a
-```
-
-The new audio is generated automatically on the next hook trigger.
-
-### Silence all notifications
+## Silence all notifications
 
 ```bash
 export VOICE_NOTIFY_OFF=1
 ```
 
-Add to your shell profile to make permanent.
-
-### Regenerate audio
-
-```bash
-# All languages
-python3 scripts/generate.py
-
-# Single language
-python3 scripts/generate.py pt-BR
-python3 scripts/generate.py en-US
-```
+Add to your shell profile to persist.
 
 ## Detected commands
 
-| Category | Commands detected |
-|----------|------------------|
+| Category | Commands |
+|---|---|
 | Build | `npm run build`, `vite build`, `pnpm build`, `yarn build` |
 | Tests | `vitest run`, `npm test`, `pnpm test` |
 | E2E | `playwright test`, `npx playwright` |
-| Deploy | `supabase functions deploy` |
-| Migration | `supabase db push` |
 | Lint | `npm run lint`, `eslint .` |
 | Typecheck | `tsc --noEmit`, `npm run typecheck` |
+| Deploy | `supabase functions deploy` |
+| Migration | `supabase db push` |
 | PR | `gh pr create` |
 | GitNexus | `npx gitnexus analyze` |
+| Alerts | `git push` (main/force), `rm -rf`, `supabase db push/reset`, `sudo`, `npm publish`, `gh release`, `kill -9`, destructive git |
 
-To add more commands, edit `hooks/voice-notify.sh` and add a new `case` entry.
+Edit `hooks/voice-notify.sh` or `hooks/voice-alert.sh` to add more.
 
 ## Uninstall
 
-```bash
-./uninstall.sh
+```
+/plugin uninstall claude-voice-notify@michascorreia
 ```
 
-This removes the hooks from `~/.claude/settings.json`. Audio files and the venv remain — delete the folder to remove everything.
+## Development
+
+Regenerate audio after editing `scripts/generate.py`:
+
+```bash
+./install.sh      # creates venv, installs edge-tts, regenerates audio
+```
 
 ## License
 

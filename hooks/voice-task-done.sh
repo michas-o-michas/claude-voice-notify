@@ -1,21 +1,21 @@
 #!/bin/bash
-# PostCompact: speaks when context is auto-compacted.
-# Feature-gated: "basic" category (default ON).
+# Stop: speaks a short "done" when Claude finishes responding.
 # Silence: export VOICE_NOTIFY_OFF=1
 
 [ "$VOICE_NOTIFY_OFF" = "1" ] && exit 0
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-$PLUGIN_ROOT}"
-CONFIG_FILE="$PLUGIN_DATA/config.json"
 
+# Feature gate: task_done is ON by default, disabled only if explicitly set to false
+CONFIG_FILE="$PLUGIN_DATA/config.json"
 if [ -f "$CONFIG_FILE" ]; then
-  ENABLED=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('features',{}).get('basic', True))" 2>/dev/null)
+  ENABLED=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_FILE')); print(d.get('features',{}).get('task_done', True))" 2>/dev/null)
   [ "$ENABLED" = "False" ] && exit 0
 fi
 
-LANG_CODE=""
-if [ -f "$CONFIG_FILE" ]; then
+LANG_CODE="${CLAUDE_PLUGIN_OPTION_LANG:-}"
+if [ -z "$LANG_CODE" ] && [ -f "$CONFIG_FILE" ]; then
   LANG_CODE=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('lang',''))" 2>/dev/null)
 fi
 if [ -z "$LANG_CODE" ] && [ -f "$PLUGIN_ROOT/config.txt" ]; then
@@ -23,7 +23,7 @@ if [ -z "$LANG_CODE" ] && [ -f "$PLUGIN_ROOT/config.txt" ]; then
 fi
 [ -z "$LANG_CODE" ] && LANG_CODE="pt-BR"
 
-AUDIO="$PLUGIN_ROOT/audio/$LANG_CODE/compact_done.m4a"
+AUDIO="$PLUGIN_ROOT/audio/$LANG_CODE/task_done.m4a"
 [ -f "$AUDIO" ] && afplay "$AUDIO" >/dev/null 2>&1 &
 
 exit 0

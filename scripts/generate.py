@@ -59,6 +59,8 @@ LANGUAGES = {
             "attention_perm":   "Precisa de autorização.",
             "attention_idle":   "Aguardando sua resposta.",
             "attention_generic":"Precisa da sua atenção.",
+            # Stop (task completed)
+            "task_done":        "Pronto.",
         },
     },
     "en-US": {
@@ -105,6 +107,8 @@ LANGUAGES = {
             "attention_perm":   "Needs authorization.",
             "attention_idle":   "Waiting for your response.",
             "attention_generic":"Needs your attention.",
+            # Stop (task completed)
+            "task_done":        "Done.",
         },
     },
 }

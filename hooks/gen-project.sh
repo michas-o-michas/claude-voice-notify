@@ -1,13 +1,15 @@
 #!/bin/bash
 # Generates and caches per-project name audio on demand.
-# Usage: gen-project.sh <cwd> <plugin_dir> <lang_code>
+# Usage: gen-project.sh <cwd> <plugin_root> <plugin_data> <lang_code>
 # Prints the audio path to stdout (empty if not yet generated — triggers background generation).
 
 CWD="$1"
-PLUGIN_DIR="$2"
-LANG_CODE="${3:-pt-BR}"
+PLUGIN_ROOT="$2"
+PLUGIN_DATA="$3"
+LANG_CODE="${4:-pt-BR}"
 
-[ -z "$CWD" ] || [ -z "$PLUGIN_DIR" ] && exit 0
+[ -z "$CWD" ] || [ -z "$PLUGIN_ROOT" ] && exit 0
+[ -z "$PLUGIN_DATA" ] && PLUGIN_DATA="$PLUGIN_ROOT"
 [ ! -d "$CWD" ] && exit 0
 
 # Only announce inside a git repo
@@ -15,11 +17,11 @@ if ! git -C "$CWD" rev-parse --show-toplevel >/dev/null 2>&1; then
   exit 0
 fi
 
-# Use repo root name as project name (avoids "src" or "components")
 REPO_ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)
 [ -z "$REPO_ROOT" ] && REPO_ROOT="$CWD"
 
-PROJ_DIR="$PLUGIN_DIR/audio/projects"
+# Per-project cache lives in PLUGIN_DATA (persists across updates)
+PROJ_DIR="$PLUGIN_DATA/projects"
 mkdir -p "$PROJ_DIR"
 
 RAW=$(basename "$REPO_ROOT")
@@ -36,19 +38,20 @@ fi
 
 [ -f "$LOCK" ] && exit 0
 
-# Resolve display text: check aliases file first
-ALIASES="$PROJ_DIR/aliases.txt"
+# Aliases file — check PLUGIN_DATA first (user's custom), fall back to PLUGIN_ROOT example
 TEXT=""
-if [ -f "$ALIASES" ]; then
-  TEXT=$(grep -E "^${SLUG}=" "$ALIASES" 2>/dev/null | head -1 | sed "s/^${SLUG}=//")
-fi
+for ALIASES in "$PLUGIN_DATA/projects/aliases.txt" "$PLUGIN_ROOT/audio/projects/aliases.txt"; do
+  if [ -f "$ALIASES" ]; then
+    TEXT=$(grep -E "^${SLUG}=" "$ALIASES" 2>/dev/null | head -1 | sed "s/^${SLUG}=//")
+    [ -n "$TEXT" ] && break
+  fi
+done
 [ -z "$TEXT" ] && TEXT=$(echo "$SLUG" | sed 's/[-_]/ /g')
 
-# Resolve edge-tts binary
-EDGE_TTS="$PLUGIN_DIR/.venv/bin/edge-tts"
+# Resolve edge-tts: user ran /voice-notify-setup which installed it here
+EDGE_TTS="$PLUGIN_DATA/.venv/bin/edge-tts"
 [ ! -x "$EDGE_TTS" ] && exit 0
 
-# Resolve voice for language
 case "$LANG_CODE" in
   en-US) VOICE="en-US-JennyNeural" ;;
   *)     VOICE="pt-BR-FranciscaNeural" ;;

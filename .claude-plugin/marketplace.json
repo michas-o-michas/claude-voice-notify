@@ -1,9 +1,10 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "michascorreia",
-  "description": "Plugins by Michael Correia",
   "owner": {
     "name": "Michael Correia"
+  },
+  "metadata": {
+    "description": "Plugins by Michael Correia"
   },
   "plugins": [
     {
