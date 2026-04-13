@@ -4,6 +4,17 @@
 
 Uses pre-generated neural TTS audio (Microsoft Edge — **FranciscaNeural** pt-BR / **JennyNeural** en-US). Zero dependencies for basic use.
 
+## Why this exists
+
+When you use Claude Code for non-trivial tasks, you end up stuck in a loop:
+
+- 👀 Alt-tabbing every few seconds to check if Claude finished
+- ⏳ Claude asks for permission and blocks — you only notice minutes later
+- 🔁 Builds, tests and deploys force you to babysit the terminal
+- 🧠 Your focus breaks on every check, and it takes time to get back in flow
+
+This plugin plays a short neural TTS cue for the events that actually matter, so you can stay focused on something else and come back only when needed.
+
 ## Install
 
 ```
@@ -11,7 +22,7 @@ Uses pre-generated neural TTS audio (Microsoft Edge — **FranciscaNeural** pt-B
 /plugin install claude-voice-notify@michascorreia
 ```
 
-That's it. After restarting Claude Code, the plugin speaks by default when:
+That's it. After restarting Claude Code (or running `/reload-plugins`), the plugin speaks by default when:
 
 - Claude needs **permission** or is **waiting** for input
 - Claude **finishes** a task (short "Pronto." / "Done.")
@@ -40,6 +51,8 @@ A checklist appears — enable only what you want:
 
 You can also switch language (`pt-BR` / `en-US`) from the same command.
 
+Defaults are intentionally minimal — turn more on only if you miss it. Audio fatigue is real; fewer cues means each one still gets your attention.
+
 ## Project name (optional, neural)
 
 To have the plugin say your **project name** (e.g., "Licita Pública") before each notification:
@@ -56,6 +69,8 @@ Customize pronunciation in `${CLAUDE_PLUGIN_DATA}/projects/aliases.txt`:
 my-repo-slug=My Project Name
 licita-publica=Licita Pública
 ```
+
+Useful when you keep multiple Claude Code sessions open — you can tell which project just pinged you.
 
 ## Silence all notifications
 
@@ -81,6 +96,29 @@ Add to your shell profile to persist.
 | Alerts | `git push` (main/force), `rm -rf`, `supabase db push/reset`, `sudo`, `npm publish`, `gh release`, `kill -9`, destructive git |
 
 Edit `hooks/voice-notify.sh` or `hooks/voice-alert.sh` to add more.
+
+## Who this is for
+
+**Good fit:**
+- 👨‍💻 Devs who live in Claude Code for hours a day
+- 🔄 Anyone running long builds/tests and tired of babysitting the terminal
+- 🧑‍🚀 People juggling multiple Claude Code sessions (enable "project name" to tell them apart)
+- 🎧 Working in a quiet enough environment to hear a short cue
+
+**Not a fit:**
+- Linux/Windows users (for now)
+- Anyone always wearing headphones with loud music
+- People who find TTS voices annoying (personal preference)
+
+## Limitations (honest)
+
+- **macOS only.** `afplay` is the player. Linux/Windows support would require abstracting the player and shipping additional audio formats — not done yet.
+- **No visual fallback.** If you can't hear it, you miss it. There's no system notification fallback.
+- **Can become noise if you enable everything.** Start minimal; only enable more categories if you actively miss them.
+- **First-time "project name" generation costs ~2-3s** and needs internet (Microsoft Edge TTS). After that, it's cached.
+- **Command detection is pattern-matching.** If you run builds via custom aliases or non-standard npm scripts, they may not trigger. Easy to extend in `hooks/voice-notify.sh`.
+- **No automated tests yet.** The hooks work, but future refactors need manual verification.
+- **Niche audience.** Claude Code plugins are still a new ecosystem.
 
 ## Uninstall
 
