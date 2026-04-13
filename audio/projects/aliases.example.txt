@@ -1,0 +1,13 @@
+# Project name aliases for TTS
+# Format: git-repo-slug=Display Name (with accents and spaces)
+# The slug is the repo root folder name, lowercased, dashes replacing special chars.
+#
+# After editing, delete the corresponding .m4a to force regeneration:
+#   rm audio/projects/<slug>.m4a
+#
+# Lines starting with # are ignored.
+
+# Examples:
+# licita-publica=Licita Pública
+# my-saas-app=My SaaS App
+# ecommerce-backend=E-commerce Backend

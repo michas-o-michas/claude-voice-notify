@@ -1,0 +1,10 @@
+.venv/
+audio/pt-BR/
+audio/en-US/
+audio/projects/*.m4a
+!audio/projects/.gitkeep
+audio/projects/*.lock
+audio/projects/*.mp3
+*.bak
+__pycache__/
+*.pyc
