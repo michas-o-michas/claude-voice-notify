@@ -7,6 +7,7 @@ Usage:
   python3 scripts/generate.py pt-BR        # only pt-BR
   python3 scripts/generate.py en-US        # only en-US
 """
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -114,7 +115,35 @@ LANGUAGES = {
 }
 
 
-def generate_lang(lang_code: str) -> None:
+def detect_platform() -> str:
+    """Detect OS: 'mac', 'linux', or 'windows'."""
+    import platform
+    system = platform.system().lower()
+    if system == "darwin":
+        return "mac"
+    elif system == "windows":
+        return "windows"
+    else:
+        return "linux"
+
+
+def find_converter(platform: str):
+    """Find audio converter. Returns (converter_cmd, output_ext, needs_ffmpeg)."""
+    if platform == "mac":
+        if shutil.which("afconvert"):
+            return (["afconvert", "-f", "m4af", "-d", "aac"], "m4a", False)
+    # Linux, Windows, or macOS fallback: try ffmpeg
+    if shutil.which("ffmpeg"):
+        return (
+            ["ffmpeg", "-y", "-i", "INPUT", "-c:a", "aac", "-b:a", "128k", "OUTPUT"],
+            "m4a",
+            True,
+        )
+    # No converter: keep mp3 (all players support it)
+    return (None, "mp3", False)
+
+
+def generate_lang(lang_code: str, platform: str, converter_info: tuple) -> None:
     config = LANGUAGES[lang_code]
     voice = config["voice"]
     rate = config["rate"]
@@ -124,23 +153,36 @@ def generate_lang(lang_code: str) -> None:
 
     edge_tts = str(VENV_EDGE_TTS) if VENV_EDGE_TTS.exists() else "edge-tts"
 
+    converter_cmd, output_ext, needs_ffmpeg = converter_info
+
     total = len(phrases)
     print(f"\n[{lang_code}] voice={voice}  ({total} files → audio/{lang_code}/)")
     for i, (key, text) in enumerate(phrases.items(), 1):
         mp3_path = out_dir / f"{key}.mp3"
-        m4a_path = out_dir / f"{key}.m4a"
+        out_path = out_dir / f"{key}.{output_ext}"
         print(f"  [{i:02d}/{total}] {key}: \"{text}\"")
         subprocess.run(
             [edge_tts, "--voice", voice, "--rate", rate, "--text", text, "--write-media", str(mp3_path)],
             check=True, capture_output=True,
         )
-        if m4a_path.exists():
-            m4a_path.unlink()
-        subprocess.run(
-            ["afconvert", "-f", "m4af", "-d", "aac", str(mp3_path), str(m4a_path)],
-            check=True, capture_output=True,
-        )
-        mp3_path.unlink()
+        if output_ext == "mp3":
+            # No conversion needed, rename mp3 to final name if needed
+            if out_path != mp3_path and out_path.exists():
+                out_path.unlink()
+            if mp3_path.exists() and out_path != mp3_path:
+                mp3_path.rename(out_path)
+        else:
+            # Convert using afconvert or ffmpeg
+            if out_path.exists():
+                out_path.unlink()
+            if needs_ffmpeg:
+                # ffmpeg: replace INPUT/OUTPUT placeholders
+                cmd = [c.replace("INPUT", str(mp3_path)).replace("OUTPUT", str(out_path)) if c in ("INPUT", "OUTPUT") else c for c in converter_cmd]
+            else:
+                # afconvert
+                cmd = converter_cmd + [str(mp3_path), str(out_path)]
+            subprocess.run(cmd, check=True, capture_output=True)
+            mp3_path.unlink(missing_ok=True)
 
     print(f"  Done. {total} files in audio/{lang_code}/")
 
@@ -149,9 +191,14 @@ def main() -> None:
     target = sys.argv[1] if len(sys.argv) > 1 else None
     langs = [target] if target and target in LANGUAGES else list(LANGUAGES.keys())
 
+    platform = detect_platform()
+    converter_info = find_converter(platform)
+    _, output_ext, _ = converter_info
+
+    print(f"Platform: {platform}  Output format: {output_ext}")
     print(f"Generating audio for: {', '.join(langs)}")
     for lang in langs:
-        generate_lang(lang)
+        generate_lang(lang, platform, converter_info)
 
     print("\nAll done.")
 

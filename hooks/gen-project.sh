@@ -50,7 +50,23 @@ if [ -f "$AUDIO" ]; then
   exit 0
 fi
 
-[ -f "$LOCK" ] && exit 0
+# Check for stale lock: if lock exists, verify if the process is still alive
+if [ -f "$LOCK" ]; then
+  LOCK_PID=$(cat "$LOCK" 2>/dev/null)
+  if [ -n "$LOCK_PID" ]; then
+    # Check if process is still running
+    if kill -0 "$LOCK_PID" 2>/dev/null; then
+      # Process still running, abort
+      exit 0
+    else
+      # Process died, remove stale lock
+      rm -f "$LOCK"
+    fi
+  else
+    # Lock file empty or invalid, remove it
+    rm -f "$LOCK"
+  fi
+fi
 
 # Aliases file — check PLUGIN_DATA first (user's custom), fall back to PLUGIN_ROOT example
 TEXT=""
@@ -83,7 +99,7 @@ esac
 
 # Generate in background (non-blocking)
 (
-  touch "$LOCK"
+  echo $$ > "$LOCK"
   if [ "$VN_OS" = "mac" ]; then
     TMP_MP3="$PROJ_DIR/${SLUG}.tmp.mp3"
     "$EDGE_TTS" --voice "$VOICE" --rate "+5%" \

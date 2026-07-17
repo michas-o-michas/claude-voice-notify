@@ -14,8 +14,18 @@ if [ ! -d "$VENV" ]; then
   exit 1
 fi
 
+# Detect OS to pick correct venv binary path
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*|Windows_NT*)
+    VENV_PY="$VENV/Scripts/python.exe"
+    ;;
+  *)
+    VENV_PY="$VENV/bin/python3"
+    ;;
+esac
+
 echo "→ Removing hooks from $SETTINGS..."
-"$VENV/bin/python3" "$PLUGIN_DIR/scripts/patch-settings.py" --uninstall "$PLUGIN_DIR" "$SETTINGS"
+"$VENV_PY" "$PLUGIN_DIR/scripts/patch-settings.py" --uninstall "$PLUGIN_DIR" "$SETTINGS"
 echo "✓ Hooks removed"
 echo ""
 echo "Note: audio files and venv remain in $PLUGIN_DIR"

@@ -2,6 +2,7 @@
 # play_audio <file> — cross-platform: afplay (macOS), ffplay/mpg123/paplay/aplay (Linux),
 # Windows Media Player via PowerShell (Windows / Git Bash / MSYS / Cygwin).
 # Also exports VN_PY (python3 → python fallback) for hooks to use.
+# Debug: export VOICE_NOTIFY_DEBUG=1
 
 if [ -z "$VN_PY" ]; then
   if command -v python3 >/dev/null 2>&1; then
@@ -9,7 +10,7 @@ if [ -z "$VN_PY" ]; then
   elif command -v python >/dev/null 2>&1; then
     VN_PY=python
   else
-    VN_PY=python3
+    VN_PY=""
   fi
 fi
 
@@ -20,9 +21,22 @@ case "$(uname -s 2>/dev/null)" in
   *)       VN_OS=unknown ;;
 esac
 
+vn_debug() {
+  [ "$VOICE_NOTIFY_DEBUG" = "1" ] && echo "[voice-notify] $*" >&2
+}
+
+# resolve_audio <dir> <base> — finds audio file, trying .m4a then .mp3
+resolve_audio() {
+  local dir="$1" base="$2"
+  [ -f "$dir/${base}.m4a" ] && echo "$dir/${base}.m4a" && return 0
+  [ -f "$dir/${base}.mp3" ] && echo "$dir/${base}.mp3" && return 0
+  return 1
+}
+
 play_audio() {
   [ -z "$1" ] && return 0
-  [ -f "$1" ] || return 0
+  [ -f "$1" ] || { vn_debug "audio not found: $1"; return 0; }
+  vn_debug "playing: $1"
   case "$VN_OS" in
     mac)
       afplay "$1" >/dev/null 2>&1

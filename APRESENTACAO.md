@@ -97,8 +97,10 @@ Zero dependência pra uso básico — áudios vêm prontos no plugin. Só o "nom
 
 ## Limitações (sendo sincero)
 
-### ❌ Só funciona no macOS
-Usa `afplay` pra tocar áudio. Linux e Windows **não são suportados** por enquanto. Se houver demanda, dá pra abstrair, mas não é o caso hoje.
+### ✅ Funciona em macOS, Linux e Windows
+- **macOS**: usa `afplay` (built-in, zero deps)
+- **Linux**: precisa de um player: `ffplay`, `mpg123`, `paplay` ou `aplay`
+- **Windows**: usa Windows Media Player via PowerShell (requer Git Bash + Windows 10/11)
 
 ### ❌ Não é silencioso se você usa fone/música alta
 Óbvio, mas vale falar: o ganho desaparece se você não consegue ouvir o áudio. Não tem fallback visual (notificação do sistema, por exemplo).
@@ -147,9 +149,9 @@ export VOICE_NOTIFY_OFF=1
 - 🎧 **Quem trabalha em ambiente silencioso** e pode ouvir o áudio sem atrapalhar
 
 **Pra quem NÃO é útil:**
-- Usuários Linux/Windows (por enquanto)
 - Quem trabalha sempre de fone com música alta
 - Quem acha TTS irritante (gosto pessoal)
+- Linux sem nenhum player instalado (`ffplay`, `mpg123`, `paplay` ou `aplay`)
 
 ---
 

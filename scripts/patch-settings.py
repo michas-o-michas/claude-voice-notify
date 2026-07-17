@@ -14,6 +14,7 @@ HOOK_COMMANDS = {
     "PreToolUse":  str(PLUGIN_DIR / "hooks" / "voice-alert.sh"),
     "PostCompact": str(PLUGIN_DIR / "hooks" / "voice-compact.sh"),
     "Notification":str(PLUGIN_DIR / "hooks" / "voice-attention.sh"),
+    "Stop":        str(PLUGIN_DIR / "hooks" / "voice-task-done.sh"),
 }
 
 PRETOOLUSE_MATCHER = "Bash"
@@ -28,13 +29,6 @@ def load(path: Path) -> dict:
         return {}
 
 
-def hook_block(command: str, timeout: int, matcher: str | None = None) -> dict:
-    block: dict = {"type": "command", "command": command, "timeout": timeout}
-    if matcher:
-        block["matcher"] = matcher
-    return block
-
-
 def ensure_hook(hooks: list[dict], command: str, timeout: int) -> bool:
     """Returns True if the hook was added (not already present)."""
     for h in hooks:
@@ -42,6 +36,15 @@ def ensure_hook(hooks: list[dict], command: str, timeout: int) -> bool:
             return False
     hooks.append({"type": "command", "command": command, "timeout": timeout})
     return True
+
+
+def remove_hook(hooks: list[dict], command: str) -> bool:
+    """Returns True if the hook was removed."""
+    for i, h in enumerate(hooks):
+        if h.get("type") == "command" and h.get("command") == command:
+            hooks.pop(i)
+            return True
+    return False
 
 
 def patch(settings: dict) -> dict:
@@ -96,6 +99,33 @@ def patch(settings: dict) -> dict:
     ensure_hook(notif_block.setdefault("hooks", []),
                 HOOK_COMMANDS["Notification"], DEFAULT_TIMEOUT)
 
+    # Stop
+    stop = h.setdefault("Stop", [])
+    stop_block = next(
+        (b for b in stop if isinstance(b, dict) and "hooks" in b),
+        None,
+    )
+    if stop_block is None:
+        stop_block = {"hooks": []}
+        stop.append(stop_block)
+    ensure_hook(stop_block.setdefault("hooks", []),
+                HOOK_COMMANDS["Stop"], DEFAULT_TIMEOUT)
+
+    return settings
+
+
+def unpatch(settings: dict) -> dict:
+    """Remove all voice-notify hooks from settings."""
+    h = settings.get("hooks", {})
+
+    for event_name, command in HOOK_COMMANDS.items():
+        if event_name not in h:
+            continue
+        blocks = h[event_name]
+        for block in blocks:
+            if isinstance(block, dict) and "hooks" in block:
+                remove_hook(block["hooks"], command)
+
     return settings
 
 
@@ -106,10 +136,16 @@ def main() -> None:
     backup = SETTINGS_PATH.with_suffix(".json.bak")
     shutil.copy2(SETTINGS_PATH, backup)
 
-    patched = patch(settings)
+    if "--uninstall" in sys.argv:
+        patched = unpatch(settings)
+        print(f"  Backup: {backup}")
+        print(f"  Unpatched: {SETTINGS_PATH}")
+    else:
+        patched = patch(settings)
+        print(f"  Backup: {backup}")
+        print(f"  Patched: {SETTINGS_PATH}")
+
     SETTINGS_PATH.write_text(json.dumps(patched, indent=2, ensure_ascii=False) + "\n")
-    print(f"  Backup: {backup}")
-    print(f"  Patched: {SETTINGS_PATH}")
 
 
 if __name__ == "__main__":

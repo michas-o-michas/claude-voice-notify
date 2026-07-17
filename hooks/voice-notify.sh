@@ -2,6 +2,7 @@
 # PostToolUse: speaks when categorized commands complete.
 # Feature-gated: each KEY maps to a category; plays only if the category is enabled.
 # Silence: export VOICE_NOTIFY_OFF=1
+# Debug: export VOICE_NOTIFY_DEBUG=1
 
 [ "$VOICE_NOTIFY_OFF" = "1" ] && exit 0
 
@@ -10,6 +11,10 @@ PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-$PLUGIN_ROOT}"
 CONFIG_FILE="$PLUGIN_DATA/config.json"
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/play.sh"
+
+[ -z "$VN_PY" ] && { vn_debug "python not found, skipping"; exit 0; }
+
+vn_debug "voice-notify.sh: starting"
 
 # feature_enabled <feature_name> <default_bool: "true"|"false">
 feature_enabled() {
@@ -41,6 +46,8 @@ IS_ERROR=$(echo "$INPUT" | "$VN_PY" -c "import sys,json; print(json.load(sys.std
 INTERRUPTED=$(echo "$INPUT" | "$VN_PY" -c "import sys,json; print(json.load(sys.stdin).get('tool_response',{}).get('interrupted', False))" 2>/dev/null)
 CWD=$(echo "$INPUT" | "$VN_PY" -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 
+vn_debug "command: $COMMAND"
+
 [ "$INTERRUPTED" = "True" ] && exit 0
 
 KEY=""
@@ -66,11 +73,14 @@ case "$COMMAND" in
   *"npx gitnexus analyze"*)
     KEY="gitnexus"; CATEGORY="git" ;;
   *)
+    vn_debug "no match for command"
     exit 0 ;;
 esac
 
+vn_debug "matched: KEY=$KEY CATEGORY=$CATEGORY"
+
 # Feature gate (build and git are OFF by default)
-feature_enabled "$CATEGORY" "false" || exit 0
+feature_enabled "$CATEGORY" "false" || { vn_debug "category $CATEGORY disabled"; exit 0; }
 
 # Language
 LANG_CODE="${CLAUDE_PLUGIN_OPTION_LANG:-}"
@@ -86,8 +96,10 @@ AUDIO_DIR="$PLUGIN_ROOT/audio/$LANG_CODE"
 SUFFIX="ok"
 [ "$IS_ERROR" = "True" ] && SUFFIX="fail"
 
-AUDIO="$AUDIO_DIR/${KEY}_${SUFFIX}.m4a"
-[ ! -f "$AUDIO" ] && exit 0
+AUDIO=$(resolve_audio "$AUDIO_DIR" "${KEY}_${SUFFIX}")
+[ -z "$AUDIO" ] && { vn_debug "audio not found: ${KEY}_${SUFFIX}"; exit 0; }
+
+vn_debug "audio: $AUDIO"
 
 # Project name audio (opt-in via /voice-notify-setup)
 PROJ_AUDIO=""

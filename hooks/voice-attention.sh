@@ -7,6 +7,8 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/play.sh"
 
+[ -z "$VN_PY" ] && exit 0
+
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-$PLUGIN_ROOT}"
 CONFIG_FILE="$PLUGIN_DATA/config.json"
@@ -33,12 +35,12 @@ CWD=$(echo "$INPUT" | "$VN_PY" -c "import sys,json; print(json.load(sys.stdin).g
 
 KEY="attention_generic"
 case "$MESSAGE" in
-  *"permission"*|*"permissao"*|*"approve"*|*"authorize"*) KEY="attention_perm" ;;
+  *"permission"*|*"permissão"*|*"permissao"*|*"approve"*|*"authorize"*) KEY="attention_perm" ;;
   *"waiting"*|*"idle"*|*"input"*)                         KEY="attention_idle" ;;
 esac
 
-AUDIO="$AUDIO_DIR/${KEY}.m4a"
-[ ! -f "$AUDIO" ] && exit 0
+AUDIO=$(resolve_audio "$AUDIO_DIR" "$KEY")
+[ -z "$AUDIO" ] && exit 0
 
 PROJ_AUDIO=""
 if [ -f "$CONFIG_FILE" ]; then

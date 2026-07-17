@@ -7,6 +7,8 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/play.sh"
 
+[ -z "$VN_PY" ] && exit 0
+
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | "$VN_PY" -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null)
 [ "$TOOL_NAME" != "Bash" ] && exit 0
@@ -70,8 +72,8 @@ case "$COMMAND" in
     exit 0 ;;
 esac
 
-AUDIO="$AUDIO_DIR/${KEY}.m4a"
-[ ! -f "$AUDIO" ] && exit 0
+AUDIO=$(resolve_audio "$AUDIO_DIR" "$KEY")
+[ -z "$AUDIO" ] && exit 0
 
 PROJ_AUDIO=""
 PROJ_ENABLED=$("$VN_PY" -c "import json; print(json.load(open('$CONFIG_FILE')).get('features',{}).get('project_name', False))" 2>/dev/null)

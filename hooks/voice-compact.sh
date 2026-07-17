@@ -7,6 +7,8 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/play.sh"
 
+[ -z "$VN_PY" ] && exit 0
+
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-$PLUGIN_ROOT}"
 CONFIG_FILE="$PLUGIN_DATA/config.json"
@@ -25,7 +27,9 @@ if [ -z "$LANG_CODE" ] && [ -f "$PLUGIN_ROOT/config.txt" ]; then
 fi
 [ -z "$LANG_CODE" ] && LANG_CODE="pt-BR"
 
-AUDIO="$PLUGIN_ROOT/audio/$LANG_CODE/compact_done.m4a"
-[ -f "$AUDIO" ] && play_audio "$AUDIO" &
+AUDIO_DIR="$PLUGIN_ROOT/audio/$LANG_CODE"
+
+AUDIO=$(resolve_audio "$AUDIO_DIR" "compact_done")
+[ -n "$AUDIO" ] && play_audio "$AUDIO" &
 
 exit 0
